@@ -16,10 +16,14 @@ class CustomDataset(torch.utils.data.Dataset):
     
     def __getitem__(self, idx):
         list_in = list()
+        list_out = list()
         for i in range(self.input_data_scaled.shape[1]):
             list_in.append(self.input_data_scaled[idx, i])
             list_in[i].requires_grad = True
-        return list_in
+        for i in range(self.output_data_scaled.shape[1]):
+            list_out.append(self.output_data_scaled[idx, i])
+            list_out[i].requires_grad = True
+        return list_in, list_out
     
     def scale_input(self, input_data):
         input_scaling_range = self.input_scaling_range
@@ -60,23 +64,6 @@ class CustomDataset(torch.utils.data.Dataset):
             (output_range[1, :] - output_range[0, :]) + \
             output_range[0, :]
         return output_data
-
-class ANN_net(torch.nn.Module):
-    def __init__(self, layer_dim_list, activation_function):
-        super().__init__()
-        layers_list = torch.nn.ModuleList()
-        for layer_num in range(0, len(layer_dim_list) - 1):
-            layers_list.append(torch.nn.Linear(layer_dim_list[layer_num], layer_dim_list[layer_num + 1]))
-        self.layers_list = layers_list
-        self.activation_function = activation_function
-    
-    def forward(self, x):
-        for i in range(len(self.layers_list)-1):
-            x = self.activation_function(self.layers_list[i](x))
-        result = self.layers_list[-1](x)
-        return result
-
-def train_nn(domain_dataloader, bc_dataloader, ic_dataloader, ann_model, )
 
 if __name__ == "__main__":
     # TODO Test examples for each of them

@@ -10,7 +10,8 @@ class ANN_net(torch.nn.Module):
         self.layers_list = layers_list
         self.activation_function = activation_function
     
-    def forward(self, x):
+    def forward(self, *args):
+        x = torch.vstack((args[0])).T
         for i in range(len(self.layers_list)-1):
             x = self.activation_function(self.layers_list[i](x))
         result = self.layers_list[-1](x)
