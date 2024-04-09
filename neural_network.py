@@ -11,6 +11,11 @@ class ANN_net(torch.nn.Module):
         self.activation_function = activation_function
     
     def forward(self, *args):
+        # TODO Assumes output is scalar
+        # how to return result if output is not vector?
+        # output can not be changed like dataloader
+        # as the requires_grad=True in ANN_net i.e.
+        # before output can be split
         x = torch.vstack((args[0])).T
         for i in range(len(self.layers_list)-1):
             x = self.activation_function(self.layers_list[i](x))
