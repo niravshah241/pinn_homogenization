@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import matplotlib.pyplot as pyplot
+import matplotlib.pyplot as plt
 from custom_dataset import CustomDataset
 from neural_network import ANN_net
 from train_validation import train_nn, validate_nn
@@ -13,7 +13,7 @@ dtype = torch.float32
 alpha = 3.
 beta = 1.2
 def true_sol(domain_points, alpha=alpha, beta=beta):
-    return (1 + (domain_points[:, 0])**2 + \
+    return (1. + (domain_points[:, 0])**2 + \
         alpha * (domain_points[:, 1])**2 + \
         beta * (domain_points[:, 2])).unsqueeze(1)
 
@@ -77,7 +77,7 @@ points_scaling_range = torch.tensor([[-1., -1., -1.],
 
 
 # Solution (u) range
-u_val_range = torch.tensor([[-0.2], [6.4]]).to(device=device).to(dtype=dtype)
+u_val_range = torch.tensor([[1.], [5.3]]).to(device=device).to(dtype=dtype)
 u_val_scaling_range = torch.tensor([[-1.], [1.]]).to(device=device).to(dtype=dtype)
 
 # Source term
@@ -140,7 +140,7 @@ def pde_loss(u_pred, input_args, output_args, input_scaling_range, output_scalin
     residual = ((output_range[1][0] - output_range[0][0]) * (input_scaling_range[1][2] - input_scaling_range[0][2])) / ((output_scaling_range[1][0] - output_scaling_range[0][0]) * (input_range[1][2] - input_range[0][2])) * u_t[0] - diffusion_coefficient * ((input_scaling_range[1][0] - input_scaling_range[0][0])**2 / (input_range[1][0] - input_range[0][0])**2 * (output_range[1][0] - output_range[0][0]) / (output_scaling_range[1][0] - output_scaling_range[0][0]) * u_xx[0] + (input_scaling_range[1][1] - input_scaling_range[0][1])**2 / (input_range[1][1] - input_range[0][1])**2 * (output_range[1][0] - output_range[0][0])/ (output_scaling_range[1][0] - output_scaling_range[0][0]) * u_yy[0]) - f_true
     return torch.mean(residual**2)
 
-max_epochs = 3000
+max_epochs = 5000
 total_loss_list = list()
 residual_loss_list = list()
 ic_loss_list = list()
@@ -170,25 +170,51 @@ for epoch in range(max_epochs):
     if (epoch + 1) % 10 == 0:
         print(f"Epoch: {epoch+1}/{max_epochs}, Loss: {total_loss.item()}, Loss boundary: {loss_bc.item()}, Loss IC: {loss_ic.item()}, Loss residual: {loss_residual.item()}, Epoch time: {end_time - start_time}")
 
-num_test_points = 100
+num_test_points_x = 11
+num_test_points_y = 12
 t_step_test = t_max / 2 # Test time step
 
-x_test = torch.rand(num_test_points).unsqueeze(1).to(device=device)
-y_test = torch.rand(num_test_points).unsqueeze(1).to(device=device)
-t_test = torch.ones(num_test_points).unsqueeze(1).to(device=device) * t_step_test
+x_test = torch.linspace(0., 1., num_test_points_x).to(device=device)
+y_test = torch.linspace(0., 1., num_test_points_y).to(device=device)
 
-test_input = torch.hstack((x_test, y_test, t_test))
-test_input_scaled = bc_dataloader.dataset.scale_input(test_input)
+X_test, Y_test = torch.meshgrid(x_test, y_test)
+X_test_reshaped, Y_test_reshaped = X_test.reshape(-1, 1), Y_test.reshape(-1, 1)
+T_test = torch.ones(X_test_reshaped.shape[0], 1).to(device=device) * t_step_test
 
-x_test_scaled = test_input_scaled[:, 0]
-y_test_scaled = test_input_scaled[:, 1]
-t_test_scaled = test_input_scaled[:, 2]
+input_scaled = bc_dataloader.dataset.scale_input(torch.hstack((X_test_reshaped, Y_test_reshaped, T_test)))
+print(input_scaled.shape)
+X_test_scaled, Y_test_scaled, T_test_scaled = \
+    input_scaled[:, 0], input_scaled[:, 1], input_scaled[:, 2]
 
 with torch.no_grad():
-    u_test = bc_dataloader.dataset.reverse_scale_output(net([x_test_scaled, y_test_scaled, t_test_scaled]))
+    u_test = bc_dataloader.dataset.reverse_scale_output(net([X_test_scaled, Y_test_scaled, T_test_scaled]))
 
-u_true = true_sol(test_input)
+u_true = true_sol(torch.hstack((X_test_reshaped, Y_test_reshaped, T_test)))
 
 print(f"ANN pred: {u_test.T}")
 print(f"True: {u_true.T}")
 print(f"Error: {torch.max(abs(u_test - u_true))}")
+
+plt.figure(figsize=[8, 8])
+ann_colorbar = \
+    plt.contourf(X_test.cpu(), Y_test.cpu(),
+                 u_test.reshape(num_test_points_x, num_test_points_y).cpu(),
+                 levels=50, cmap='viridis')
+plt.colorbar(ann_colorbar)
+plt.title("ANN Prediction")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.savefig("ann_prediction.png")
+
+plt.figure(figsize=[8, 8])
+true_colorbar = \
+    plt.contourf(X_test.cpu(), Y_test.cpu(),
+                 u_true.reshape(num_test_points_x, num_test_points_y).cpu(),
+                 levels=50, cmap='viridis')
+plt.colorbar(true_colorbar)
+plt.title("True")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.savefig("true_solution.png")
+
+plt.show()
