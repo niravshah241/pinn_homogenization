@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 def train_nn(dataloader_pinn, dataloader_bc, dataloader_ic,
-             loss_func_pinn, optimiser, ann_model):
+             loss_func_pinn, optimiser, ann_model, weights):
     # TODO Document loss_func_pinn has specific function call.
     # NOTE Same optimiser for bc, ic and pinn loss functions
     # NOTE Assumed MSE loss function for BC and IC
@@ -37,7 +37,7 @@ def train_nn(dataloader_pinn, dataloader_bc, dataloader_ic,
         # NOTE Notice bc in output_range_bc and output_scaling_range_bc
         # Because in dataloader_pinn, output will be f_true and not u.
         # However, u is included in dataloader_bc or dataloader_ic.
-    total_loss = loss_bc + loss_ic + loss_residual
+    total_loss = weights[0] * loss_bc + weights[1] *loss_ic + weights[2] * loss_residual
     total_loss.backward()
     optimiser.step()
     optimiser.zero_grad()

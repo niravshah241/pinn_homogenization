@@ -140,19 +140,20 @@ def pde_loss(u_pred, input_args, output_args, input_scaling_range, output_scalin
     residual = ((output_range[1][0] - output_range[0][0]) * (input_scaling_range[1][2] - input_scaling_range[0][2])) / ((output_scaling_range[1][0] - output_scaling_range[0][0]) * (input_range[1][2] - input_range[0][2])) * u_t[0] - diffusion_coefficient * ((input_scaling_range[1][0] - input_scaling_range[0][0])**2 / (input_range[1][0] - input_range[0][0])**2 * (output_range[1][0] - output_range[0][0]) / (output_scaling_range[1][0] - output_scaling_range[0][0]) * u_xx[0] + (input_scaling_range[1][1] - input_scaling_range[0][1])**2 / (input_range[1][1] - input_range[0][1])**2 * (output_range[1][0] - output_range[0][0])/ (output_scaling_range[1][0] - output_scaling_range[0][0]) * u_yy[0]) - f_true
     return torch.mean(residual**2)
 
-max_epochs = 5000
+max_epochs = 30000
 total_loss_list = list()
 residual_loss_list = list()
 ic_loss_list = list()
 bc_loss_list = list()
 
 optimiser = torch.optim.Adam(net.parameters(), lr=1.e-3)
+weights = torch.tensor([1., 1., 0.01]).to(device=device).to(dtype=dtype)
 
 for epoch in range(max_epochs):
     start_time = time.process_time()
     total_loss, loss_bc, loss_ic, loss_residual = \
         train_nn(domain_dataloader, bc_dataloader,
-                 ic_dataloader, pde_loss, optimiser, net)
+                 ic_dataloader, pde_loss, optimiser, net, weights)
     # TODO validate_nn by splitting data in test and train set
     total_loss_list.append(total_loss.item())
     ic_loss_list.append(loss_ic.item())
@@ -170,8 +171,8 @@ for epoch in range(max_epochs):
     if (epoch + 1) % 10 == 0:
         print(f"Epoch: {epoch+1}/{max_epochs}, Loss: {total_loss.item()}, Loss boundary: {loss_bc.item()}, Loss IC: {loss_ic.item()}, Loss residual: {loss_residual.item()}, Epoch time: {end_time - start_time}")
 
-num_test_points_x = 11
-num_test_points_y = 12
+num_test_points_x = 25
+num_test_points_y = 25
 t_step_test = t_max / 2 # Test time step
 
 x_test = torch.linspace(0., 1., num_test_points_x).to(device=device)
@@ -216,5 +217,16 @@ plt.title("True")
 plt.xlabel("x")
 plt.ylabel("y")
 plt.savefig("true_solution.png")
+
+plt.figure(figsize=[8, 8])
+true_colorbar = \
+    plt.contourf(X_test.cpu(), Y_test.cpu(),
+                 (abs(u_test - u_true)).reshape(num_test_points_x, num_test_points_y).cpu(),
+                 levels=50, cmap='viridis')
+plt.colorbar(true_colorbar)
+plt.title("Absolute error")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.savefig("absolute_error.png")
 
 plt.show()
