@@ -140,7 +140,7 @@ def pde_loss(u_pred, input_args, output_args, input_scaling_range, output_scalin
     residual = ((output_range[1][0] - output_range[0][0]) * (input_scaling_range[1][2] - input_scaling_range[0][2])) / ((output_scaling_range[1][0] - output_scaling_range[0][0]) * (input_range[1][2] - input_range[0][2])) * u_t[0] - diffusion_coefficient * ((input_scaling_range[1][0] - input_scaling_range[0][0])**2 / (input_range[1][0] - input_range[0][0])**2 * (output_range[1][0] - output_range[0][0]) / (output_scaling_range[1][0] - output_scaling_range[0][0]) * u_xx[0] + (input_scaling_range[1][1] - input_scaling_range[0][1])**2 / (input_range[1][1] - input_range[0][1])**2 * (output_range[1][0] - output_range[0][0])/ (output_scaling_range[1][0] - output_scaling_range[0][0]) * u_yy[0]) - f_true
     return torch.mean(residual**2)
 
-max_epochs = 30000
+max_epochs = 10000
 total_loss_list = list()
 residual_loss_list = list()
 ic_loss_list = list()
